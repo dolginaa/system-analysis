@@ -1,6 +1,5 @@
-import json
 import numpy as np
-
+import json
 
 # данные из json содержащего термы температуры
 temp = ["холодно", "комфортно", "жарко"]
@@ -15,76 +14,56 @@ heat = ["слабый", "умеренный", "интенсивный"]
 e, f, g, h = [0, 3, 6], [0, 4, 7], [3, 6, 10], [4, 7, 10]
 
 
+# Функция принадлежности трапециевидной формы
 def trapezoidal_membership(x, a, b, c, d):
-    if x <= a or x >= d:
+    if x < a or x > d:
         return 0
-    elif a < x <= b:
+    elif a <= x < b:
         return (x - a) / (b - a)
-    elif b < x <= c:
+    elif b <= x <= c:
         return 1
-    elif c < x < d:
+    elif c < x <= d:
         return (d - x) / (d - c)
+    return 0
 
 
-def apply_rules(temperature, temperature_sets, rules, heater_power_sets):
-    fuzzy_outputs = []
-    for rule in rules:
-        condition = rule["if"]
-        action = rule["then"]
-        
-        # Уровень активации правила
-        activation_level = temperature_sets[condition](temperature)
-        
-        # Определяем нечеткое множество вывода
-        output_set = heater_power_sets[action]
-        
-        # Применяем уровень активации
-        fuzzy_outputs.append((activation_level, output_set))
-    
-    return fuzzy_outputs
+# фаззификация
+def fuzzify_temperature(temperature_sets, temperature):
+    return {term: func(temperature) for term, func in temperature_sets.items()}
+
+# получение нечетких выводов
+def apply_rules(rules, fuzzy_temperature):
+    activated_rules = {}
+    for temp_term, heating_term in rules.items():
+        activation = fuzzy_temperature.get(temp_term, 0)
+        activated_rules[heating_term] = max(activation, activated_rules.get(heating_term, 0))
+    return activated_rules
+
+# объединение нечетких выводов
+def aggregate_outputs(heating_sets, activated_rules):
+    def aggregated_function(s):
+        return max(
+            (activation * heating_sets[term](s) for term, activation in activated_rules.items()),
+            default=0,
+        )
+    return aggregated_function
+
+# дефаззификация
+def defuzzify(aggregated_function, s_range):
+    numerator = sum(s * aggregated_function(s) for s in s_range)
+    denominator = sum(aggregated_function(s) for s in s_range)
+    return numerator / denominator if denominator != 0 else 0
 
 
-def aggregate_fuzzy_outputs(fuzzy_outputs, resolution=100):
-    x_values = np.linspace(0, 10, resolution)
-    aggregated_membership = np.zeros_like(x_values)
-    
-    for activation_level, output_set in fuzzy_outputs:
-        print(f"Activation level: {activation_level}")
-        for i, x in enumerate(x_values):
-            membership = output_set(x)
-            aggregated_membership[i] = max(aggregated_membership[i], 
-                                           min(activation_level, membership))
-            print(f"x: {x}, membership: {membership}, aggregated_membership: {aggregated_membership[i]}")
-    return x_values, aggregated_membership
-
-
-def defuzzify_first_max(x_values, membership_values):
-    max_value = np.max(membership_values)
-    for x, membership in zip(x_values, membership_values):
-        if membership == max_value:
-            return x
-    return x_values[0]
-
-
-def fuzzy_control_system(temperature_sets, rules, heater_power_sets, temperature):
-    # Фаззификация
-    fuzzy_outputs = apply_rules(temperature, temperature_sets, rules, heater_power_sets)
-    
-    # Объединение нечетких множеств
-    x_values, aggregated_membership = aggregate_fuzzy_outputs(fuzzy_outputs)
-    print("x_values and aggregated: ")
-    print(x_values, aggregated_membership)
-    
-    # Дефаззификация
-    optimal_heater_power = defuzzify_first_max(x_values, aggregated_membership)
-    
-    return optimal_heater_power
-
-
-def main(temperature_func, heat_level_func, management, current_temp):
+def main(temperature_func, heat_level_func, management_system, temperature):
+    s_range=np.linspace(0, 14, 100)
+    # преобразуем json строки в удобный для чтения формат
     temperature_func_json = json.loads(temperature_func)
     heat_level_func_json = json.loads(heat_level_func)
+    management_system_json = json.loads(management_system)
 
+    # парсинг термов "температура"
+    # сложные условия при парсинге сделаны для того чтобы вычислить правильные вершины трапеций
     for i, temp_data in enumerate(temperature_func_json["температура"]):
         temp[i] = temp_data["id"]
         if temp_data["points"][0][1] == 1 and temp_data["points"][1][1] == 1:
@@ -103,6 +82,7 @@ def main(temperature_func, heat_level_func, management, current_temp):
             c[i] = temp_data["points"][2][0]
             d[i] = temp_data["points"][3][0]
 
+    # парсинг термов "уровень нагрева"
     for i, heat_data in enumerate(heat_level_func_json["температура"]):
         heat[i] = heat_data["id"]
         if heat_data["points"][0][1] == 1 and heat_data["points"][1][1] == 1:
@@ -121,14 +101,10 @@ def main(temperature_func, heat_level_func, management, current_temp):
             g[i] = heat_data["points"][2][0]
             h[i] = heat_data["points"][3][0]
 
-
-    rules = []
-    for i, manage_data in enumerate(management):
-        current = {
-            "if":  manage_data[0],
-            "then": manage_data[1]
-        }
-        rules.append(current)
+    # парсинг правил логики управления
+    rules = {}
+    for key, value in management_system_json.items():
+        rules[key]=value
 
     temperature_sets = {
         temp[0]: lambda x: trapezoidal_membership(x, a[0], b[0], c[0], d[0]),
@@ -142,11 +118,18 @@ def main(temperature_func, heat_level_func, management, current_temp):
         heat[2]: lambda x: trapezoidal_membership(x, e[2], f[2], g[2], h[2]),
     }
 
-    optimal_power = fuzzy_control_system(temperature_sets, rules, heater_power_sets, current_temp)
-    print(f"Оптимальное значение мощности нагрева: {optimal_power}")
+    # фаззификация
+    fuzzy_temp = fuzzify_temperature(temperature_sets, temperature)
+    # нечеткий вывод
+    activated_rules = apply_rules(rules, fuzzy_temp)
+    # объединение нечетких выводов
+    aggregated_func = aggregate_outputs(heater_power_sets, activated_rules)
+    # дефаззификация
+    optimal_control = defuzzify(aggregated_func, s_range)
+
+    return optimal_control
 
 
-current_temp = 15
 x1 = """{
   "температура": [
       {
@@ -209,12 +192,12 @@ x2 = """{
       }
   ]
 }"""
-x3= [
-    ['холодно', 'интенсивный'],
-    ['комфортно', 'умеренный'],
-    ['жарко', 'слабый']
-] 
+x3= """{
+    "холодно":"интенсивный",
+    "комфортно":"умеренный",
+    "жарко":"слабый"
+}"""
 
-
-if __name__ == "__main__":
-    main(x1, x2, x3, current_temp)
+current_temperature = 19  # Текущая температура
+optimal_heating = main(x1, x2, x3, current_temperature)
+print(f"Оптимальное управление: {optimal_heating}")
