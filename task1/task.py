@@ -48,22 +48,7 @@ def edges_to_adjacency_list(edges):
     
     return adjacency_list
 
-def main():
-    input_str = """{
-        "1": {
-            "2": {
-                "3": {
-                    "5": {},
-                    "6": {}
-                },
-                "4": {
-                    "7": {},
-                    "8": {}
-                }
-            }
-        }
-    }"""
-
+def main(input_str):
     # Преобразуем JSON в список рёбер
     edges = json_to_edges(input_str)
     print("Edges:", edges)
@@ -79,6 +64,23 @@ def main():
     print("Adjacency List:")
     for node in sorted(adjacency_list):
         print(f"{node}: {adjacency_list[node]}")
+    
+    return adjacency_list, adjacency_matrix
 
 if __name__ == "__main__":
-    main()
+    input_str = """{
+        "1": {
+            "2": {
+                "3": {
+                    "5": {},
+                    "6": {}
+                },
+                "4": {
+                    "7": {},
+                    "8": {}
+                }
+            }
+        }
+    }"""
+
+    main(input_str)

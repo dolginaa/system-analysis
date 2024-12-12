@@ -104,22 +104,7 @@ def build_relationship_table(edges):
     return relationship_table
 
 
-def main():
-    input_str = """{
-        "1": {
-            "2": {
-                "3": {
-                    "5": {},
-                    "6": {}
-                },
-                "4": {
-                    "7": {},
-                    "8": {}
-                }
-            }
-        }
-    }"""
-
+def main(input_str):
     # Преобразуем JSON в список рёбер
     edges = json_to_edges(input_str)
     print("Edges:", edges)
@@ -143,6 +128,21 @@ def main():
     headers = ["Node", "r1", "r2", "r3", "r4", "r5"]
     print("\nRelationship Table:")
     print(tabulate(relationship_table, headers=headers, tablefmt="grid"))
+    return relationship_table
 
 if __name__ == "__main__":
-    main()
+    input_str = """{
+        "1": {
+            "2": {
+                "3": {
+                    "5": {},
+                    "6": {}
+                },
+                "4": {
+                    "7": {},
+                    "8": {}
+                }
+            }
+        }
+    }"""
+    main(input_str)

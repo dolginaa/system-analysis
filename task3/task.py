@@ -126,22 +126,7 @@ def calculate_entropy(relationship_table):
 
     return entropy_values
 
-def main():
-    input_str = """{
-        "1": {
-            "2": {
-                "3": {
-                    "5": {},
-                    "6": {}
-                },
-                "4": {
-                    "7": {},
-                    "8": {}
-                }
-            }
-        }
-    }"""
-
+def main(input_str):
     # Преобразуем JSON в список рёбер
     edges = json_to_edges(input_str)
     print("Edges:", edges)
@@ -173,7 +158,22 @@ def main():
     print("\nEntropy:", common_entropy )
     for header, value in zip(entropy_headers, entropy):
         print(f"{header}: {value:.4f}")
+    return entropy
 
 
 if __name__ == "__main__":
-    main()
+    input_str = """{
+        "1": {
+            "2": {
+                "3": {
+                    "5": {},
+                    "6": {}
+                },
+                "4": {
+                    "7": {},
+                    "8": {}
+                }
+            }
+        }
+    }"""
+    main(input_str)

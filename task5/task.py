@@ -28,13 +28,13 @@ def find_contradiction_core(ranking_a, ranking_b):
 
     return json.dumps(contradiction_core)
 
-def main():
-    ranking_a = [1, [2, 3], 4, [5, 6, 7], 8, 9, 10]
-    ranking_b = [[1, 2], [3, 4, 5], 6, 7, 9, [8, 10]]
-
+def main(ranking_a, ranking_b):
     # Найдем ядро противоречий
     contradiction_core = find_contradiction_core(ranking_a, ranking_b)
     print("Ядро противоречий AB:", contradiction_core)
+    return contradiction_core
 
 if __name__ == "__main__":
-    main()
+    ranking_a = [1, [2, 3], 4, [5, 6, 7], 8, 9, 10]
+    ranking_b = [[1, 2], [3, 4, 5], 6, 7, 9, [8, 10]]
+    main(ranking_a, ranking_b)
